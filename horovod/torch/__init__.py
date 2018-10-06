@@ -58,6 +58,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
         self._parameter_names = {v: k for k, v
                                  in sorted(named_parameters)}
         self._handles = {}
+        self._hooks = []
         self._grad_accs = []
 
         if size() > 1:
@@ -69,8 +70,16 @@ class _DistributedOptimizer(torch.optim.Optimizer):
                 if p.requires_grad:
                     p_tmp = p.expand_as(p)
                     grad_acc = p_tmp.grad_fn.next_functions[0][0]
-                    grad_acc.register_hook(self._make_hook(p))
+                    h = grad_acc.register_hook(self._make_hook(p))
+                    self._hooks.append(h)
                     self._grad_accs.append(grad_acc)
+
+    def _deregister_hooks(self):
+        for hook in self._hooks:
+            hook.remove()
+        self._handles.clear()
+        self._grad_accs = []
+        self._hooks = []
 
     def _make_hook(self, p):
         def hook(*ignore):

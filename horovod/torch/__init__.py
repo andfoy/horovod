@@ -79,7 +79,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
                     grad_acc.register_hook(self._make_hook(p))
                     self._grad_accs.append(grad_acc)
 
-    def _all_reduce_grad_async(self, p):
+    def _allreduce_grad_async(self, p):
         name = self._parameter_names.get(p)
         tensor = p.grad.data
         tensor_compressed, ctx = self._compression.compress(tensor)
@@ -98,7 +98,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
             assert not p.grad.requires_grad
             handle, ctx = None, None
             if self._reduce_gradients:
-                handle, ctx = self._all_reduce_grad_async(p)
+                handle, ctx = self._allreduce_grad_async(p)
             self._handles[p] = (handle, ctx)
         return hook
 
